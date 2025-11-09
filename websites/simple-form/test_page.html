@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Form - Browser Automation Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Simple Form - Browser Automation Test</h1>
+        
+        <form id="testForm" action="#" method="post">
+            <div class="form-group">
+                <label for="nameInput">Name:</label>
+                <input type="text" id="nameInput" name="name" placeholder="Enter your name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="emailInput">Email:</label>
+                <input type="text" id="emailInput" name="email" placeholder="Enter your email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="countrySelect">Country:</label>
+                <select id="countrySelect" name="country" required>
+                    <option value="">-- Select a country --</option>
+                    <option value="usa">United States</option>
+                    <option value="uk">United Kingdom</option>
+                    <option value="canada">Canada</option>
+                    <option value="australia">Australia</option>
+                    <option value="germany">Germany</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Preferred Contact Method:</label>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="contactEmail" name="contactMethod" value="email" required>
+                        <label for="contactEmail">Email</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="contactPhone" name="contactMethod" value="phone" required>
+                        <label for="contactPhone">Phone</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="contactSms" name="contactMethod" value="sms" required>
+                        <label for="contactSms">SMS</label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" id="submitButton">Submit Form</button>
+        </form>
+        
+        <div class="info">
+            <strong>Note:</strong> This is a test page for browser automation. The form will display submitted values in an alert.
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            alert('Form submitted!\n\n' + JSON.stringify(data, null, 2));
+        });
+    </script>
+</body>
+</html>
+
