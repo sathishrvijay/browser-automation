@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>Product Catalog</h1>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="cart.html" class="cart-link">
+                    Cart (<span id="cartCount">0</span>)
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        <a href="index.html" class="back-link">← Back to Products</a>
+        
+        <div id="productDetails">
+            <!-- Product 1: Laptop -->
+            <div id="product-1" class="product-detail" style="display: none;">
+                <div class="product-header">
+                    <div class="product-image-large">💻</div>
+                    <div class="product-info">
+                        <h2>Laptop</h2>
+                        <p class="price-large">$999.99</p>
+                        <button class="btn btn-primary" onclick="openAddToCartModal(1, 'Laptop', 999.99)">Add to Cart</button>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('desc-1', 'spec-1')">Description</button>
+                    <button class="tab-btn" onclick="switchTab('spec-1', 'desc-1')">Reviews</button>
+                </div>
+                
+                <div id="desc-1" class="tab-content active">
+                    <h3>Description</h3>
+                    <p>High-performance laptop with 16GB RAM, 512GB SSD, and Intel Core i7 processor. Perfect for work and entertainment.</p>
+                </div>
+                
+                <div id="spec-1" class="tab-content">
+                    <h3>Reviews</h3>
+                    <div class="review">
+                        <strong>John D.</strong> - "Great laptop! Fast and reliable."
+                    </div>
+                    <div class="review">
+                        <strong>Sarah M.</strong> - "Love the performance and battery life."
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product 2: Headphones -->
+            <div id="product-2" class="product-detail" style="display: none;">
+                <div class="product-header">
+                    <div class="product-image-large">🎧</div>
+                    <div class="product-info">
+                        <h2>Headphones</h2>
+                        <p class="price-large">$149.99</p>
+                        <button class="btn btn-primary" onclick="openAddToCartModal(2, 'Headphones', 149.99)">Add to Cart</button>
+                    </div>
+                </div>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('desc-2', 'spec-2')">Description</button>
+                    <button class="tab-btn" onclick="switchTab('spec-2', 'desc-2')">Reviews</button>
+                </div>
+                
+                <div id="desc-2" class="tab-content active">
+                    <h3>Description</h3>
+                    <p>Premium wireless headphones with noise cancellation, 30-hour battery life, and superior sound quality.</p>
+                </div>
+                
+                <div id="spec-2" class="tab-content">
+                    <h3>Reviews</h3>
+                    <div class="review">
+                        <strong>Mike T.</strong> - "Amazing sound quality!"
+                    </div>
+                    <div class="review">
+                        <strong>Lisa K.</strong> - "Very comfortable for long listening sessions."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add to Cart Modal -->
+    <div id="addToCartModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddToCartModal()">&times;</span>
+            <h3>Add to Cart</h3>
+            <p id="modalProductName"></p>
+            <label for="quantity">Quantity:</label>
+            <input type="number" id="quantity" min="1" value="1" class="quantity-input">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeAddToCartModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmAddToCart()">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Load product based on URL parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id') || '1';
+        document.getElementById(`product-${productId}`).style.display = 'block';
+        updateCartCount();
+    </script>
+</body>
+</html>
+

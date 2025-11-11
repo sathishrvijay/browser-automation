@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Cart</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>Product Catalog</h1>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="cart.html" class="cart-link">
+                    Cart (<span id="cartCount">0</span>)
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        <h2>Shopping Cart</h2>
+        
+        <div id="cartItems" class="cart-items">
+            <p id="emptyCart" class="empty-cart">Your cart is empty.</p>
+        </div>
+        
+        <div id="cartSummary" class="cart-summary" style="display: none;">
+            <div class="summary-row">
+                <strong>Total:</strong>
+                <strong id="cartTotal">$0.00</strong>
+            </div>
+            <button class="btn btn-primary btn-large" onclick="checkout()">Checkout</button>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+        renderCart();
+        updateCartCount();
+    </script>
+</body>
+</html>
+

@@ -7,9 +7,11 @@ A project for exploring agentic browser task automation using Selenium. This rep
 ```
 browser-automation/
 ├── websites/              # Test websites and web pages
-│   └── simple-form/      # Simple form test page
+│   ├── simple-form/      # Simple form test page
+│   └── product-catalog/  # Product catalog with shopping cart
 ├── automations/          # Selenium automation scripts
-│   └── simple-form/     # Automation for simple-form website
+│   ├── simple-form/     # Automation for simple-form website
+│   └── product-catalog/ # Automation for product-catalog website
 ├── bauto-venv/          # Python virtual environment (created during setup)
 ├── requirements.txt      # Python dependencies
 └── README.md
@@ -59,6 +61,7 @@ This structure allows for easy expansion:
 
 Each automation has its own README with specific instructions. For example:
 - See `automations/simple-form/README.md` for the simple-form automation
+- See `automations/product-catalog/README.md` for the product-catalog automation (multi-page, modals, tabs, shopping cart)
 
 ## Next Steps
 
