@@ -12,6 +12,13 @@ browser-automation/
 ├── automations/          # Selenium automation scripts
 │   ├── simple-form/     # Automation for simple-form website
 │   └── product-catalog/ # Automation for product-catalog website
+├── agentic-automation/   # LLM-powered agentic automation system
+│   ├── agent.py         # Main agent orchestrator
+│   ├── llm_client.py    # LLM API integration
+│   ├── page_analyzer.py # Page structure extraction
+│   ├── element_finder.py # Semantic element finding
+│   ├── action_executor.py # Selenium action execution
+│   └── examples/        # Example usage scripts
 ├── bauto-venv/          # Python virtual environment (created during setup)
 ├── requirements.txt      # Python dependencies
 └── README.md
@@ -54,6 +61,8 @@ This structure allows for easy expansion:
    This will install:
    - `selenium`: Browser automation framework
    - `webdriver-manager`: Automatic ChromeDriver management
+   - `openai`: OpenAI API client (for agentic automation)
+   - `python-dotenv`: Environment variable management
 
    **Note:** Make sure your virtual environment is activated (you should see `(bauto-venv)` in your terminal prompt) before installing dependencies.
 
@@ -62,6 +71,7 @@ This structure allows for easy expansion:
 Each automation has its own README with specific instructions. For example:
 - See `automations/simple-form/README.md` for the simple-form automation
 - See `automations/product-catalog/README.md` for the product-catalog automation (multi-page, modals, tabs, shopping cart)
+- See `agentic-automation/README.md` for the LLM-powered agentic automation system
 
 ## Next Steps
 
