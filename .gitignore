@@ -40,3 +40,7 @@ Thumbs.db
 # Logs
 *.log
 
+# Environment variables
+.env
+config.py
+
