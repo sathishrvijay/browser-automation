@@ -203,6 +203,64 @@ sequenceDiagram
 - **`action_executor.py`** - Selenium action execution
 - **`prompts.py`** - LLM prompt templates
 
+### Python-Style Pseudocode
+
+```python
+def main():
+    driver = setup_chrome_driver()
+    llm = LLMClient(model="gpt-4")
+    agent = AgenticAgent(driver, llm, verbose=True)
+    driver.get("http://localhost:8001/index.html")
+    result = agent.execute("Add 1 laptop to the cart for checkout")
+    print(result)
+
+
+class AgenticAgent:
+    def __init__(self, driver, llm, verbose):
+        self.driver = driver
+        self.llm = llm
+        self.verbose = verbose
+        self.page_analyzer = PageAnalyzer(driver, verbose)
+        self.action_executor = ActionExecutor(driver, verbose)
+        self.history = []
+
+    def execute(self, task):
+        plan = self._understand_task(task)        # LLM call #1
+        for step in plan["steps"]:
+            summary = self.page_analyzer.summary()
+            action = self._plan_action(step, summary)  # LLM calls #2..N
+            result = self.action_executor.run(action)
+            self.history.append((step, action, result))
+        final_summary = self.page_analyzer.summary()
+        verification = self._verify(task, final_summary)  # LLM call #N+1
+        return {"success": verification["success"], "steps": len(plan["steps"])}
+
+
+class ActionExecutor:
+    def run(self, action_plan):
+        if action_plan["action"] == "click":
+            element = find_element(action_plan["selector"])
+            element.click()
+            handle_modal_if_needed()
+        elif action_plan["action"] == "type":
+            element = find_element(action_plan["selector"])
+            element.clear()
+            element.send_keys(action_plan["value"])
+        wait_if_requested(action_plan.get("wait_for"))
+        return {"success": True}
+
+
+# Call stack
+# main()
+# └─ AgenticAgent.execute()
+#    ├─ _understand_task()  -> LLM creates step plan
+#    ├─ loop steps:
+#    │    ├─ PageAnalyzer.summary()
+#    │    ├─ _plan_action() -> LLM picks selector/action
+#    │    └─ ActionExecutor.run() -> Selenium executes + modal handling
+#    └─ _verify() -> LLM confirms success
+```
+
 ## Example Usage
 
 ```python
