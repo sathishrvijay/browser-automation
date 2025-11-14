@@ -30,6 +30,7 @@ def load_module(module_name, file_path):
     return module
 
 # Load modules in dependency order
+config_module = load_module("config", os.path.join(agentic_dir, "config.py"))
 prompts_module = load_module("prompts", os.path.join(agentic_dir, "prompts.py"))
 llm_module = load_module("llm_client", os.path.join(agentic_dir, "llm_client.py"))
 page_analyzer_module = load_module("page_analyzer", os.path.join(agentic_dir, "page_analyzer.py"))
@@ -40,6 +41,8 @@ agent_module = load_module("agent", os.path.join(agentic_dir, "agent.py"))
 # Extract classes
 AgenticAgent = agent_module.AgenticAgent
 LLMClient = llm_module.LLMClient
+SELENIUM_CONFIG = config_module.SELENIUM_CONFIG
+LLM_CONFIG = config_module.LLM_CONFIG
 
 
 def setup_driver():
@@ -55,8 +58,8 @@ def setup_driver():
     options.page_load_strategy = 'normal'
     
     driver = webdriver.Chrome(service=service, options=options)
-    driver.set_page_load_timeout(30)
-    driver.implicitly_wait(10)
+    driver.set_page_load_timeout(SELENIUM_CONFIG.page_load_timeout)
+    driver.implicitly_wait(SELENIUM_CONFIG.implicit_wait)
     
     return driver
 
@@ -83,7 +86,7 @@ def main():
         driver = setup_driver()
         
         # Initialize LLM client
-        llm_client = LLMClient(provider="openai", model="gpt-4", verbose=args.verbose)
+        llm_client = LLMClient(provider=LLM_CONFIG.provider, model=LLM_CONFIG.model, verbose=args.verbose)
         
         # Initialize agent
         agent = AgenticAgent(driver, llm_client, verbose=args.verbose)

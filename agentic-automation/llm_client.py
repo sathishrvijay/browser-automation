@@ -15,10 +15,34 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 
+try:
+    from .config import LLM_CONFIG
+    from .utils import get_logger
+except ImportError:
+    import sys
+    import os
+    import importlib.util
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Load local modules explicitly to avoid conflicts
+    def _load_local_module(name, filename):
+        spec = importlib.util.spec_from_file_location(name, os.path.join(current_dir, filename))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+    
+    config_module = _load_local_module("config", "config.py")
+    utils_module = _load_local_module("utils", "utils.py")
+    
+    LLM_CONFIG = config_module.LLM_CONFIG  # type: ignore
+    get_logger = utils_module.get_logger  # type: ignore
+
+
 class LLMClient:
     """Client for interacting with LLM APIs."""
     
-    def __init__(self, provider: str = "openai", model: str = "gpt-4", 
+    def __init__(self, provider: Optional[str] = None, model: Optional[str] = None, 
                  api_key: Optional[str] = None, verbose: bool = False):
         """
         Initialize LLM client.
@@ -29,9 +53,9 @@ class LLMClient:
             api_key: API key (if None, reads from environment)
             verbose: Whether to print verbose logs
         """
-        self.provider = provider
-        self.model = model
-        self.verbose = verbose
+        self.provider = provider or LLM_CONFIG.provider
+        self.model = model or LLM_CONFIG.model
+        self.logger = get_logger("LLM", enabled=verbose)
         
         if provider == "openai":
             if not OPENAI_AVAILABLE:
@@ -64,11 +88,7 @@ class LLMClient:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
         
-        if self.verbose:
-            print(f"\n[LLM] Calling {self.model}...")
-            if system_prompt:
-                print(f"[LLM] System prompt: {system_prompt[:100]}...")
-            print(f"[LLM] User prompt: {prompt[:200]}...")
+        self.logger.info(f"Calling {self.model} (temp={temperature})")
         
         try:
             response = self.client.chat.completions.create(
@@ -79,13 +99,11 @@ class LLMClient:
             )
             result = response.choices[0].message.content
             
-            if self.verbose:
-                print(f"[LLM] Response: {result[:200]}...")
+            self.logger.info(f"LLM response preview: {result[:120]}...")
             
             return result
         except Exception as e:
-            if self.verbose:
-                print(f"[LLM] Error: {e}")
+            self.logger.error(f"LLM API error: {e}")
             raise RuntimeError(f"LLM API error: {str(e)}")
     
     def complete_json(self, prompt: str, system_prompt: Optional[str] = None,
@@ -116,13 +134,10 @@ class LLMClient:
             
             parsed = json.loads(json_str)
             
-            if self.verbose:
-                print(f"[LLM] Parsed JSON: {str(parsed)[:200]}...")
+            self.logger.info(f"Parsed JSON preview: {str(parsed)[:120]}...")
             
             return parsed
         except json.JSONDecodeError as e:
-            if self.verbose:
-                print(f"[LLM] JSON parse error: {e}")
-                print(f"[LLM] Raw response: {response[:500]}")
+            self.logger.error(f"JSON parse error: {e}. Raw response: {response[:200]}")
             raise ValueError(f"Failed to parse JSON from LLM response: {response[:200]}... Error: {e}")
 

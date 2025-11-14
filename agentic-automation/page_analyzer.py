@@ -6,23 +6,43 @@ Analyzes web pages to create a simplified representation for LLM understanding.
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
-from typing import List, Dict, Any
-import json
+from typing import List, Dict, Any, Optional
+
+try:
+    from .config import AGENT_BEHAVIOR
+    from .utils import get_logger
+except ImportError:
+    import sys
+    import os
+    import importlib.util
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Load local modules explicitly to avoid conflicts
+    def _load_local_module(name, filename):
+        spec = importlib.util.spec_from_file_location(name, os.path.join(current_dir, filename))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+    
+    config_module = _load_local_module("config", "config.py")
+    utils_module = _load_local_module("utils", "utils.py")
+    
+    AGENT_BEHAVIOR = config_module.AGENT_BEHAVIOR  # type: ignore
+    get_logger = utils_module.get_logger  # type: ignore
 
 
 class PageAnalyzer:
     """Analyzes web pages and extracts interactive elements."""
     
-    def __init__(self, driver: WebDriver, verbose: bool = False):
-        """
-        Initialize page analyzer.
-        
-        Args:
-            driver: Selenium WebDriver instance
-            verbose: Whether to print verbose logs
-        """
+    def __init__(self, driver: WebDriver, verbose: bool = False, cache_enabled: Optional[bool] = None):
         self.driver = driver
         self.verbose = verbose
+        self.logger = get_logger("PAGE_ANALYZER", enabled=verbose)
+        self.cache_enabled = AGENT_BEHAVIOR.cache_page_summary if cache_enabled is None else cache_enabled
+        self._last_url: Optional[str] = None
+        self._last_summary: Optional[str] = None
+        self._last_analysis: Optional[Dict[str, Any]] = None
     
     def analyze(self) -> Dict[str, Any]:
         """
@@ -35,24 +55,53 @@ class PageAnalyzer:
             - elements: List of interactive elements
             - structure: Simplified page structure
         """
-        if self.verbose:
-            print(f"[PAGE_ANALYZER] Analyzing page: {self.driver.current_url}")
+        current_url = self.driver.current_url
+        if self.cache_enabled and self._last_analysis and self._last_url == current_url:
+            return self._last_analysis
         
+        self.logger.info(f"Analyzing page: {current_url}")
         elements = self._extract_interactive_elements()
+        self.logger.info(f"Found {len(elements)} interactive elements")
         
-        if self.verbose:
-            print(f"[PAGE_ANALYZER] Found {len(elements)} interactive elements")
-            for elem in elements[:5]:  # Show first 5
-                print(f"  - {elem['type']}: {elem.get('description', 'N/A')[:60]}")
-            if len(elements) > 5:
-                print(f"  ... and {len(elements) - 5} more")
-        
-        return {
-            "url": self.driver.current_url,
+        analysis = {
+            "url": current_url,
             "title": self.driver.title,
             "elements": elements,
             "structure": self._extract_structure()
         }
+        
+        if self.cache_enabled:
+            self._last_url = current_url
+            self._last_analysis = analysis
+            self._last_summary = None  # invalidate cached summary; will rebuild lazily
+        
+        return analysis
+    
+    def get_page_summary(self) -> str:
+        """Return a cached page summary for LLM consumption."""
+        current_url = self.driver.current_url
+        if self.cache_enabled and self._last_summary and self._last_url == current_url:
+            return self._last_summary
+        
+        analysis = self.analyze()
+        
+        summary = f"Page: {analysis['title']}\n"
+        summary += f"URL: {analysis['url']}\n\n"
+        
+        if analysis['structure']['headings']:
+            summary += "Headings:\n"
+            for h in analysis['structure']['headings']:
+                summary += f"  {'#' * h['level']} {h['text']}\n"
+            summary += "\n"
+        
+        summary += f"Interactive Elements ({len(analysis['elements'])}):\n"
+        for elem in analysis['elements']:
+            summary += f"  - {elem['type']}: {elem.get('description', 'N/A')}\n"
+        
+        if self.cache_enabled:
+            self._last_summary = summary
+        
+        return summary
     
     def _extract_interactive_elements(self) -> List[Dict[str, Any]]:
         """Extract all interactive elements from the page."""
