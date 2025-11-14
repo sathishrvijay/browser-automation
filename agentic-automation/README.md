@@ -49,6 +49,151 @@ python product_catalog_example.py
 4. **Action Execution**: Selenium actions are executed based on LLM decisions
 5. **Verification**: System confirms task completion
 
+### Overall Flow
+
+```mermaid
+graph TD
+    A[User Instruction<br/>"Add 1 laptop to cart"] --> B[Agent: Understand Task]
+    B --> C[LLM: Break into Steps]
+    C --> D[Step 1: Click View Details]
+    D --> E[Page Analyzer: Extract Elements]
+    E --> F[LLM: Plan Action]
+    F --> G[Action Executor: Execute]
+    G --> H{Modal Detected?}
+    H -->|Yes| I[Auto-handle Modal]
+    H -->|No| J[Continue]
+    I --> J
+    J --> K{More Steps?}
+    K -->|Yes| D
+    K -->|No| L[LLM: Verify Completion]
+    L --> M[Return Result]
+    
+    style A fill:#e1f5ff
+    style M fill:#d4edda
+    style H fill:#fff3cd
+    style I fill:#fff3cd
+```
+
+### Task Understanding Flow
+
+```mermaid
+graph LR
+    A[Natural Language Task] --> B[Page Analyzer]
+    B --> C[Extract Page Elements<br/>Buttons, Links, Inputs]
+    C --> D[Create Page Summary]
+    D --> E[LLM: Task Understanding Prompt]
+    E --> F[LLM Response: JSON Plan]
+    F --> G[Parse Steps Array]
+    G --> H[Execution Plan<br/>Step 1: click View Details<br/>Step 2: wait page load<br/>Step 3: click Add to Cart<br/>...]
+    
+    style A fill:#e1f5ff
+    style H fill:#d4edda
+    style E fill:#fff3cd
+```
+
+### Element Finding Flow
+
+```mermaid
+graph TD
+    A[User Intent<br/>"Add to Cart button"] --> B[Page Analyzer]
+    B --> C[Extract All Elements]
+    C --> D[Create Element Descriptions<br/>- Type: button<br/>- Text: Add to Cart<br/>- Context: near product price]
+    D --> E[LLM: Element Finding Prompt]
+    E --> F[LLM: Match Intent to Elements]
+    F --> G{Match Found?}
+    G -->|Yes| H[Return Best Match<br/>selector_strategy: text<br/>selector_value: Add to Cart]
+    G -->|No| I[Try Alternative Approaches]
+    I --> J{Alternatives?}
+    J -->|Yes| F
+    J -->|No| K[Return None]
+    H --> L[Action Executor Uses Selector]
+    
+    style A fill:#e1f5ff
+    style H fill:#d4edda
+    style E fill:#fff3cd
+    style K fill:#f8d7da
+```
+
+### Action Execution Flow
+
+```mermaid
+graph TD
+    A[Action Plan<br/>action: click<br/>selector: Add to Cart] --> B[Find Element]
+    B --> C{Element Found?}
+    C -->|No| D[Return Error]
+    C -->|Yes| E[Wait for Clickable]
+    E --> F[Execute Click]
+    F --> G[Wait 0.5s]
+    G --> H{Modal Detected?}
+    H -->|Yes| I[Find Modal Content]
+    I --> J[Search for Confirmation Buttons<br/>Add to Cart, Confirm, OK, etc.]
+    J --> K{Button Found?}
+    K -->|Yes| L[Click Confirmation]
+    K -->|No| M[Log Warning]
+    L --> N[Wait for Modal Close]
+    H -->|No| O[Continue]
+    M --> O
+    N --> O
+    O --> P[Wait for Condition<br/>if specified]
+    P --> Q[Return Success]
+    
+    style A fill:#e1f5ff
+    style Q fill:#d4edda
+    style H fill:#fff3cd
+    style I fill:#fff3cd
+    style D fill:#f8d7da
+```
+
+### Complete Step Execution Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Agent
+    participant PageAnalyzer
+    participant LLM
+    participant ActionExecutor
+    participant Browser
+    
+    User->>Agent: Execute("Add 1 laptop to cart")
+    Agent->>PageAnalyzer: Analyze current page
+    PageAnalyzer->>Browser: Extract DOM elements
+    Browser-->>PageAnalyzer: Elements list
+    PageAnalyzer-->>Agent: Page summary
+    
+    Agent->>LLM: Task understanding prompt
+    LLM-->>Agent: Execution plan (7 steps)
+    
+    loop For each step
+        Agent->>PageAnalyzer: Get page state
+        PageAnalyzer-->>Agent: Current elements
+        Agent->>LLM: Action planning prompt
+        LLM-->>Agent: Action plan (selector, action)
+        Agent->>ActionExecutor: Execute action plan
+        ActionExecutor->>Browser: Find element
+        Browser-->>ActionExecutor: Element found
+        ActionExecutor->>Browser: Click element
+        Browser-->>ActionExecutor: Clicked
+        
+        alt Modal appears
+            ActionExecutor->>Browser: Detect modal
+            Browser-->>ActionExecutor: Modal visible
+            ActionExecutor->>Browser: Find confirmation button
+            Browser-->>ActionExecutor: Button found
+            ActionExecutor->>Browser: Click confirmation
+            Browser-->>ActionExecutor: Modal closed
+        end
+        
+        ActionExecutor-->>Agent: Step completed
+    end
+    
+    Agent->>PageAnalyzer: Final page analysis
+    PageAnalyzer-->>Agent: Final state
+    Agent->>LLM: Verification prompt
+    LLM-->>Agent: Task completed
+    Agent-->>User: Success result
+```
+
 ## Architecture
 
 - **`agent.py`** - Main orchestrator
