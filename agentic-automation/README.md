@@ -53,7 +53,7 @@ python product_catalog_example.py
 
 ```mermaid
 graph TD
-    A[User Instruction<br/>"Add 1 laptop to cart"] --> B[Agent: Understand Task]
+    A["User Instruction<br/>Add 1 laptop to cart"] --> B[Agent: Understand Task]
     B --> C[LLM: Break into Steps]
     C --> D[Step 1: Click View Details]
     D --> E[Page Analyzer: Extract Elements]
@@ -95,13 +95,13 @@ graph LR
 
 ```mermaid
 graph TD
-    A[User Intent<br/>"Add to Cart button"] --> B[Page Analyzer]
+    A["User Intent<br/>Add to Cart button"] --> B[Page Analyzer]
     B --> C[Extract All Elements]
-    C --> D[Create Element Descriptions<br/>- Type: button<br/>- Text: Add to Cart<br/>- Context: near product price]
+    C --> D["Create Element Descriptions<br/>Type: button<br/>Text: Add to Cart<br/>Context: near product price"]
     D --> E[LLM: Element Finding Prompt]
     E --> F[LLM: Match Intent to Elements]
     F --> G{Match Found?}
-    G -->|Yes| H[Return Best Match<br/>selector_strategy: text<br/>selector_value: Add to Cart]
+    G -->|Yes| H["Return Best Match<br/>selector_strategy: text<br/>selector_value: Add to Cart"]
     G -->|No| I[Try Alternative Approaches]
     I --> J{Alternatives?}
     J -->|Yes| F
@@ -118,7 +118,7 @@ graph TD
 
 ```mermaid
 graph TD
-    A[Action Plan<br/>action: click<br/>selector: Add to Cart] --> B[Find Element]
+    A["Action Plan<br/>action: click<br/>selector: Add to Cart"] --> B[Find Element]
     B --> C{Element Found?}
     C -->|No| D[Return Error]
     C -->|Yes| E[Wait for Clickable]
@@ -126,7 +126,7 @@ graph TD
     F --> G[Wait 0.5s]
     G --> H{Modal Detected?}
     H -->|Yes| I[Find Modal Content]
-    I --> J[Search for Confirmation Buttons<br/>Add to Cart, Confirm, OK, etc.]
+    I --> J["Search for Confirmation Buttons<br/>Add to Cart, Confirm, OK, etc."]
     J --> K{Button Found?}
     K -->|Yes| L[Click Confirmation]
     K -->|No| M[Log Warning]
@@ -134,7 +134,7 @@ graph TD
     H -->|No| O[Continue]
     M --> O
     N --> O
-    O --> P[Wait for Condition<br/>if specified]
+    O --> P["Wait for Condition<br/>if specified"]
     P --> Q[Return Success]
     
     style A fill:#e1f5ff
@@ -155,7 +155,7 @@ sequenceDiagram
     participant ActionExecutor
     participant Browser
     
-    User->>Agent: Execute("Add 1 laptop to cart")
+    User->>Agent: Execute(Add 1 laptop to cart)
     Agent->>PageAnalyzer: Analyze current page
     PageAnalyzer->>Browser: Extract DOM elements
     Browser-->>PageAnalyzer: Elements list
