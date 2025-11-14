@@ -6,24 +6,38 @@ Dynamically locates page elements based on user intent rather than hardcoded sel
 
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from typing import List, Dict, Any, Optional
 
 # Handle both relative and absolute imports
 try:
     from .page_analyzer import PageAnalyzer
     from .llm_client import LLMClient
-    from .prompts import create_element_finding_prompt, ELEMENT_FINDING_SYSTEM
+    from .prompts import ElementPrompts
+    from .utils import get_logger
 except ImportError:
     # Fallback for direct module loading
     import sys
     import os
+    import importlib.util
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    sys.path.insert(0, current_dir)
-    from page_analyzer import PageAnalyzer
-    from llm_client import LLMClient
-    from prompts import create_element_finding_prompt, ELEMENT_FINDING_SYSTEM
+    
+    # Load local modules explicitly to avoid conflicts
+    def _load_local_module(name, filename):
+        spec = importlib.util.spec_from_file_location(name, os.path.join(current_dir, filename))
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+    
+    page_analyzer_module = _load_local_module("page_analyzer", "page_analyzer.py")
+    llm_client_module = _load_local_module("llm_client", "llm_client.py")
+    prompts_module = _load_local_module("prompts", "prompts.py")
+    utils_module = _load_local_module("utils", "utils.py")
+    
+    PageAnalyzer = page_analyzer_module.PageAnalyzer  # type: ignore
+    LLMClient = llm_client_module.LLMClient  # type: ignore
+    ElementPrompts = prompts_module.ElementPrompts  # type: ignore
+    get_logger = utils_module.get_logger  # type: ignore
 
 
 class ElementFinder:
@@ -41,6 +55,7 @@ class ElementFinder:
         self.driver = driver
         self.llm_client = llm_client
         self.verbose = verbose
+        self.logger = get_logger("ELEMENT_FINDER", enabled=verbose)
         self.page_analyzer = PageAnalyzer(driver, verbose=verbose)
     
     def find_element_by_intent(self, intent: str, element_type: Optional[str] = None) -> Any:
@@ -54,8 +69,7 @@ class ElementFinder:
         Returns:
             Selenium WebElement or None
         """
-        if self.verbose:
-            print(f"[ELEMENT_FINDER] Finding element by intent: '{intent}'")
+        self.logger.info(f"Finding element by intent: '{intent}'")
         
         # Analyze current page
         analysis = self.page_analyzer.analyze()
@@ -64,40 +78,36 @@ class ElementFinder:
         elements = analysis['elements']
         if element_type:
             elements = [e for e in elements if element_type in e['type']]
-            if self.verbose:
-                print(f"[ELEMENT_FINDER] Filtered to {len(elements)} {element_type} elements")
+            self.logger.info(f"Filtered to {len(elements)} {element_type} elements")
         
         if not elements:
-            if self.verbose:
-                print(f"[ELEMENT_FINDER] No elements found")
+            self.logger.warn("No elements available for matching")
             return None
         
         # Use LLM to find matching element
-        prompt = create_element_finding_prompt(intent, elements)
-        if self.verbose:
-            print(f"[ELEMENT_FINDER] Sending element finding prompt to LLM...")
+        prompt = ElementPrompts.build(intent, elements)
+        self.logger.info("Sending element finding prompt to LLM...")
         
         try:
             result = self.llm_client.complete_json(
                 prompt,
-                system_prompt=ELEMENT_FINDING_SYSTEM,
+                system_prompt=ElementPrompts.system,
                 temperature=0.2
             )
             
             # Get best match
             matched_elements = result.get('matched_elements', [])
             if not matched_elements:
-                if self.verbose:
-                    print(f"[ELEMENT_FINDER] LLM found no matching elements")
+                self.logger.warn("LLM found no matching elements")
                 return None
             
             best_match_idx = result.get('best_match', 0)
             match = matched_elements[best_match_idx]
             
-            if self.verbose:
-                print(f"[ELEMENT_FINDER] Best match: {match.get('selector_strategy')}={match.get('selector_value')}")
-                print(f"[ELEMENT_FINDER] Confidence: {match.get('confidence', 'N/A')}")
-                print(f"[ELEMENT_FINDER] Reasoning: {match.get('reasoning', 'N/A')}")
+            self.logger.info(
+                f"Best match: {match.get('selector_strategy')}={match.get('selector_value')} "
+                f"(confidence {match.get('confidence', 'N/A')})"
+            )
             
             # Find element using selector strategy
             element = self._find_element_by_selector(
@@ -107,16 +117,13 @@ class ElementFinder:
             )
             
             if element:
-                if self.verbose:
-                    print(f"[ELEMENT_FINDER] ✅ Element found")
+                self.logger.info("✅ Element found")
             else:
-                if self.verbose:
-                    print(f"[ELEMENT_FINDER] ❌ Element not found with selector")
+                self.logger.warn("❌ Element not found with selector from LLM")
             
             return element
         except Exception as e:
-            if self.verbose:
-                print(f"[ELEMENT_FINDER] Error finding element: {e}")
+            self.logger.error(f"Error finding element: {e}")
             return None
     
     def find_elements_by_intent(self, intent: str, element_type: Optional[str] = None) -> List[Any]:
@@ -139,11 +146,11 @@ class ElementFinder:
         if not elements:
             return []
         
-        prompt = create_element_finding_prompt(intent, elements)
+        prompt = ElementPrompts.build(intent, elements)
         try:
             result = self.llm_client.complete_json(
                 prompt,
-                system_prompt=ELEMENT_FINDING_SYSTEM,
+                system_prompt=ElementPrompts.system,
                 temperature=0.2
             )
             
@@ -161,7 +168,7 @@ class ElementFinder:
             
             return found_elements
         except Exception as e:
-            print(f"Error finding elements: {e}")
+            self.logger.error(f"Error finding elements: {e}")
             return []
     
     def _find_element_by_selector(self, strategy: str, value: str, index: Optional[int] = None) -> Any:
@@ -208,7 +215,7 @@ class ElementFinder:
                     return elements[0] if index is None else elements[index]
                 
         except Exception as e:
-            print(f"Error using selector {strategy}={value}: {e}")
+            self.logger.error(f"Error using selector {strategy}={value}: {e}")
         
         return None
 

@@ -41,6 +41,20 @@ python product_catalog_example.py --verbose
 python product_catalog_example.py
 ```
 
+## Configuration
+
+Settings live in `agentic-automation/config.py` and can be overridden with env vars:
+
+| Purpose | Env Var | Default |
+| --- | --- | --- |
+| LLM provider/model | `AGENTIC_LLM_PROVIDER`, `AGENTIC_LLM_MODEL` | `openai`, `gpt-4` |
+| LLM temperatures | `AGENTIC_TEMP_TASK`, `AGENTIC_TEMP_ACTION`, `AGENTIC_TEMP_VERIFY` | 0.3 / 0.2 / 0.2 |
+| Selenium waits | `AGENTIC_PAGE_LOAD_TIMEOUT`, `AGENTIC_IMPLICIT_WAIT` | 30 / 10 |
+| Logging | `AGENTIC_LOG_ENABLED`, `AGENTIC_LOG_TIMESTAMP` | enabled |
+| Page summary cache | `AGENTIC_CACHE_PAGE_SUMMARY` | enabled |
+
+Tweak latency, logging, or model choice without modifying code.
+
 ## Example Usage
 
 ```python
@@ -65,6 +79,13 @@ print(f"Success: {result['success']}")
 3. **Element Finding**: LLM matches user intent to page elements semantically
 4. **Action Execution**: Selenium actions are executed based on LLM decisions
 5. **Verification**: System confirms task completion
+
+### Optimizations
+
+- Cached page summaries avoid rescanning the DOM when the URL hasn't changed.
+- Hybrid planning short-circuits simple waits/navigations without calling the LLM.
+- Shared logger utilities keep verbose output consistent across modules.
+- Dataclasses (`ActionPlan`, `StepResult`) make execution history easier to debug.
 
 ### Python-Style Pseudocode
 
