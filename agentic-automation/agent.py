@@ -81,6 +81,7 @@ class AgenticAgent:
         self.action_executor = ActionExecutor(driver, verbose=verbose)
         self.execution_history: List[StepResult] = []
         self._action_sleep = SELENIUM_CONFIG.action_sleep
+        self.timing_data: Dict[str, float] = {}
     
     def execute(self, task: str) -> Dict[str, Any]:
         """
@@ -102,10 +103,16 @@ class AgenticAgent:
             self.logger.info(f"Task: {task}")
             self.logger.info(f"{'='*60}")
         
+        # Initialize timing
+        self.timing_data = {}
+        overall_start = time.time()
+        
         try:
             # Step 1: Understand task and create plan
             self.logger.info("Step 1: Understanding task and creating plan...")
+            understand_start = time.time()
             plan = self._understand_task(task)
+            self.timing_data["task_understanding"] = time.time() - understand_start
             if not plan or 'steps' not in plan:
                 return {
                     "success": False,
@@ -120,16 +127,28 @@ class AgenticAgent:
             
             # Step 2: Execute each step
             completed_steps = 0
+            step_timings: List[Dict[str, float]] = []
+            
             for i, step in enumerate(plan['steps'], 1):
+                step_start = time.time()
+                step_timing = {"step_number": i}
+                
                 self.logger.info(f"\nStep {i}/{len(plan['steps'])}: {step.get('action', 'unknown')} - {step.get('target_description', 'N/A')}")
                 
                 # Get current page state
+                page_analysis_start = time.time()
                 page_summary = self.page_analyzer.get_page_summary()
+                step_timing["page_analysis"] = time.time() - page_analysis_start
                 
                 # Plan specific action
+                action_planning_start = time.time()
                 action_plan = self._plan_action(step, page_summary)
+                step_timing["action_planning"] = time.time() - action_planning_start
+                
                 if not action_plan:
                     self.logger.warn("Could not plan action for this step")
+                    step_timing["total"] = time.time() - step_start
+                    step_timings.append(step_timing)
                     continue
                 
                 self.logger.info(
@@ -139,16 +158,23 @@ class AgenticAgent:
                     self.logger.info(f"Value: {action_plan.value}")
                 
                 # Execute action
+                action_execution_start = time.time()
                 result = self.action_executor.execute_action(action_plan)
+                step_timing["action_execution"] = time.time() - action_execution_start
+                step_timing["total"] = time.time() - step_start
+                
                 self.execution_history.append(
                     StepResult(
                         step_number=i,
                         description=step,
                         action_plan=action_plan,
                         success=result.get("success", False),
-                        message=result.get("message", "")
+                        message=result.get("message", ""),
+                        timing=step_timing
                     )
                 )
+                
+                step_timings.append(step_timing)
                 
                 if result.get('success'):
                     completed_steps += 1
@@ -160,19 +186,29 @@ class AgenticAgent:
                 # Brief pause between steps
                 time.sleep(self._action_sleep)
             
+            self.timing_data["step_executions"] = step_timings
+            
             # Step 3: Verify completion
+            verification_start = time.time()
             final_page_summary = self.page_analyzer.get_page_summary()
             verification = self._verify_completion(task, final_page_summary)
+            self.timing_data["verification"] = time.time() - verification_start
+            
+            self.timing_data["total"] = time.time() - overall_start
             
             self.logger.info(
                 f"Verification result: {verification.get('completed', False)} - {verification.get('evidence', 'N/A')}"
             )
+            
+            # Print timing summary
+            self._print_timing_summary()
             
             return {
                 "success": verification.get('completed', False) and verification.get('success', False),
                 "message": verification.get('evidence', 'Task completed'),
                 "steps_completed": completed_steps,
                 "total_steps": len(plan['steps']),
+                "timing": self.timing_data,
                 "final_state": {
                     "url": self.driver.current_url,
                     "title": self.driver.title,
@@ -270,4 +306,68 @@ class AgenticAgent:
             )
 
         return None
+    
+    def _print_timing_summary(self):
+        """Print a summary of timing data for all steps."""
+        if not self.timing_data:
+            return
+        
+        self.logger.info("\n" + "="*60)
+        self.logger.info("TIMING SUMMARY")
+        self.logger.info("="*60)
+        
+        # Overall timing
+        if "total" in self.timing_data:
+            self.logger.info(f"Total execution time: {self.timing_data['total']:.2f}s")
+        
+        # Task understanding
+        if "task_understanding" in self.timing_data:
+            self.logger.info(f"Task understanding: {self.timing_data['task_understanding']:.2f}s")
+        
+        # Step-by-step timing
+        if "step_executions" in self.timing_data:
+            self.logger.info("\nStep-by-step timing:")
+            total_step_time = 0.0
+            for step_timing in self.timing_data["step_executions"]:
+                step_num = step_timing.get("step_number", "?")
+                total = step_timing.get("total", 0.0)
+                page_analysis = step_timing.get("page_analysis", 0.0)
+                action_planning = step_timing.get("action_planning", 0.0)
+                action_execution = step_timing.get("action_execution", 0.0)
+                
+                total_step_time += total
+                
+                self.logger.info(f"  Step {step_num}:")
+                self.logger.info(f"    Total: {total:.2f}s")
+                if page_analysis > 0:
+                    self.logger.info(f"      - Page analysis: {page_analysis:.2f}s")
+                if action_planning > 0:
+                    self.logger.info(f"      - Action planning: {action_planning:.2f}s")
+                if action_execution > 0:
+                    self.logger.info(f"      - Action execution: {action_execution:.2f}s")
+            
+            self.logger.info(f"\nTotal step execution time: {total_step_time:.2f}s")
+        
+        # Verification timing
+        if "verification" in self.timing_data:
+            self.logger.info(f"Verification: {self.timing_data['verification']:.2f}s")
+        
+        # Breakdown summary
+        if "total" in self.timing_data:
+            total_time = self.timing_data["total"]
+            self.logger.info("\nTime breakdown:")
+            if "task_understanding" in self.timing_data:
+                pct = (self.timing_data["task_understanding"] / total_time) * 100
+                self.logger.info(f"  Task understanding: {pct:.1f}%")
+            
+            if "step_executions" in self.timing_data:
+                step_time = sum(s.get("total", 0) for s in self.timing_data["step_executions"])
+                pct = (step_time / total_time) * 100
+                self.logger.info(f"  Step execution: {pct:.1f}%")
+            
+            if "verification" in self.timing_data:
+                pct = (self.timing_data["verification"] / total_time) * 100
+                self.logger.info(f"  Verification: {pct:.1f}%")
+        
+        self.logger.info("="*60 + "\n")
 

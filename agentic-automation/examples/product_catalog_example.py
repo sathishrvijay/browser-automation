@@ -111,6 +111,24 @@ def main():
         print(f"Final URL: {result['final_state']['url']}")
         print(f"Final page: {result['final_state']['title']}")
         
+        # Print timing summary if available
+        if 'timing' in result and result['timing']:
+            timing = result['timing']
+            print("\n" + "="*60)
+            print("TIMING SUMMARY")
+            print("="*60)
+            if 'total' in timing:
+                print(f"Total execution time: {timing['total']:.2f}s")
+            if 'task_understanding' in timing:
+                print(f"Task understanding: {timing['task_understanding']:.2f}s")
+            if 'step_executions' in timing:
+                total_step_time = sum(s.get('total', 0) for s in timing['step_executions'])
+                print(f"Total step execution time: {total_step_time:.2f}s")
+                print(f"Average time per step: {total_step_time / len(timing['step_executions']):.2f}s")
+            if 'verification' in timing:
+                print(f"Verification: {timing['verification']:.2f}s")
+            print("="*60)
+        
         if result['success']:
             print("\n✅ Task completed successfully!")
         else:

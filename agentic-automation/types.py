@@ -45,4 +45,5 @@ class StepResult:
     action_plan: ActionPlan
     success: bool
     message: str
+    timing: Optional[Dict[str, float]] = None
 
